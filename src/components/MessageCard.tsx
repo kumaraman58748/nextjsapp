@@ -44,12 +44,14 @@ export function MessageCard({ message, onMessageDelete }: MessageCardProps) {
       ); // ✅ ERROR TOAST
     }
   };
+  
 
   return (
+    <>
     <Card className="card-bordered">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>{message.content}</CardTitle>
+          <CardTitle> {message.content} </CardTitle>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant='destructive'>
@@ -81,5 +83,6 @@ export function MessageCard({ message, onMessageDelete }: MessageCardProps) {
       </CardHeader>
       <CardContent></CardContent>
     </Card>
+    </>
   );
 }

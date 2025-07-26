@@ -1,5 +1,4 @@
 'use client';
-
 import { MessageCard } from '@/components/MessageCard';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -43,8 +42,7 @@ function UserDashboard() {
       const axiosError = error as AxiosError<ApiResponse>;
       toast.error('Error', {
         description:
-          axiosError.response?.data.message ??
-          'Failed to fetch message settings',
+          axiosError.response?.data.message ?? 'Failed to fetch message settings',
       });
     } finally {
       setIsSwitchLoading(false);
@@ -54,9 +52,10 @@ function UserDashboard() {
   const fetchMessages = useCallback(
     async (refresh: boolean = false) => {
       setIsLoading(true);
-      setIsSwitchLoading(false);
       try {
         const response = await axios.get<ApiResponse>('/api/get-messages');
+
+        console.log(response);
         setMessages(response.data.messages || []);
         if (refresh) {
           toast.success('Refreshed Messages', {
@@ -71,18 +70,16 @@ function UserDashboard() {
         });
       } finally {
         setIsLoading(false);
-        setIsSwitchLoading(false);
       }
     },
-    [setIsLoading, setMessages]
+    []
   );
 
   useEffect(() => {
-    if (!session || !session.user) return;
-
+    if (!session?.user) return;
     fetchMessages();
     fetchAcceptMessages();
-  }, [session, setValue, fetchAcceptMessages, fetchMessages]);
+  }, [session, fetchAcceptMessages, fetchMessages]);
 
   const handleSwitchChange = async () => {
     try {
@@ -95,13 +92,46 @@ function UserDashboard() {
       const axiosError = error as AxiosError<ApiResponse>;
       toast.error('Error', {
         description:
-          axiosError.response?.data.message ??
-          'Failed to update message settings',
+          axiosError.response?.data.message ?? 'Failed to update message settings',
       });
     }
   };
 
-  if (!session || !session.user) {
+  const handlegenrateqstn = async () => {
+    try {
+      const res = await fetch('/api/generate-questions', {
+        method: 'POST',
+      });
+      console.log(res);
+      const reader = res.body?.getReader();
+      let text = '';
+      if (reader) {
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          text += decoder.decode(value);
+        }
+      }
+
+      const questions = text.split('||').map((q) => q.trim());
+
+      const newMessages: Message[] = questions.map((content) => ({
+        _id: Math.random().toString(36).substring(2),
+        content,
+        createdAt: new Date().toISOString(),
+      }));
+
+      setMessages((prev) => [...newMessages, ...prev]);
+
+      toast.success('AI Questions Added!');
+    } catch (error) {
+      toast.error('Failed to generate questions');
+      console.error(error);
+    }
+  };
+
+  if (!session?.user) {
     return <div></div>;
   }
 
@@ -116,7 +146,6 @@ function UserDashboard() {
       description: 'Profile URL has been copied to clipboard.',
     });
   };
-
   return (
     <div className="my-8 mx-4 md:mx-8 lg:mx-auto p-6 bg-white rounded w-full max-w-6xl">
       <h1 className="text-4xl font-bold mb-4">User Dashboard</h1>
@@ -145,27 +174,32 @@ function UserDashboard() {
           Accept Messages: {acceptMessages ? 'On' : 'Off'}
         </span>
       </div>
+
       <Separator />
 
-      <Button
-        className="mt-4"
-        variant="outline"
-        onClick={(e) => {
-          e.preventDefault();
-          fetchMessages(true);
-        }}
-      >
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <RefreshCcw className="h-4 w-4" />
-        )}
-      </Button>
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="flex gap-4 mt-4">
+        <Button
+          variant="outline"
+          onClick={(e) => {
+            e.preventDefault();
+            fetchMessages(true);
+          }}
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCcw className="h-4 w-4" />
+          )}
+        </Button>
+
+        <Button onClick={handlegenrateqstn}>Generate AI qstn</Button>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         {messages.length > 0 ? (
           messages.map((message, index) => (
             <MessageCard
-              key={message._id}
+              key={message._id as string}
               message={message}
               onMessageDelete={handleDeleteMessage}
             />
